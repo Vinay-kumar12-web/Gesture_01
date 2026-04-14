@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GestureMath — Hand-Powered Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #020b0f;
+    --bg2: #041219;
+    --panel: #071c24;
+    --border: #0d3d4f;
+    --accent: #00f5c4;
+    --accent2: #00b8ff;
+    --accent3: #ff6b35;
+    --warn: #ffd700;
+    --text: #c8eef5;
+    --text-dim: #4a7a8a;
+    --glow: 0 0 20px rgba(0,245,196,0.4);
+    --glow2: 0 0 20px rgba(0,184,255,0.4);
+    --font-mono: 'Share Tech Mono', monospace;
+    --font-head: 'Orbitron', monospace;
+    --font-body: 'Rajdhani', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,196,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,196,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(ellipse at 30% 20%, rgba(0,184,255,0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 70% 80%, rgba(0,245,196,0.04) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: bgPulse 8s ease-in-out infinite alternate;
+  }
+
+  @keyframes bgPulse {
+    from { opacity: 0.5; }
+    to { opacity: 1; }
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    z-index: 10;
+    padding: 24px 40px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(4,18,25,0.95) 0%, transparent 100%);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .logo-icon {
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--glow);
+    animation: iconPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes iconPulse {
+    0%, 100% { box-shadow: 0 0 10px rgba(0,245,196,0.4); }
+    50% { box-shadow: 0 0 30px rgba(0,245,196,0.8); }
+  }
+
+  .logo-icon svg { width: 24px; height: 24px; }
+
+  .logo-text h1 {
+    font-family: var(--font-head);
+    font-size: 1.4rem;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: var(--accent);
+    text-shadow: 0 0 20px rgba(0,245,196,0.6);
+  }
+
+  .logo-text p {
+    font-size: 0.7rem;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-dim);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: blink 1.5s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* ── MAIN LAYOUT ── */
+  main {
+    position: relative;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    grid-template-rows: auto 1fr;
+    gap: 20px;
+    padding: 24px 40px 30px;
+    max-width: 1400px;
+    margin: 0 auto;
+    min-height: calc(100vh - 90px);
+  }
+
+  /* ── CAMERA PANEL ── */
+  .camera-section {
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .panel-header {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0,245,196,0.03);
+  }
+
+  .panel-title {
+    font-family: var(--font-head);
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+
+  .panel-badge {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    color: var(--text-dim);
+  }
+
+  .camera-wrap {
+    position: relative;
+    aspect-ratio: 4/3;
+    background: #000;
+    overflow: hidden;
+  }
+
+  .camera-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Scan line overlay */
+  .camera-wrap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,245,196,0.015) 2px,
+      rgba(0,245,196,0.015) 4px
+    );
+    pointer-events: none;
+  }
+
+  /* Corner brackets */
+  .camera-corners {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .camera-corners::before,
+  .camera-corners::after {
+    content: '';
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-color: var(--accent);
+    border-style: solid;
+  }
+
+  .camera-corners::before {
+    top: 16px;
+    left: 16px;
+    border-width: 2px 0 0 2px;
+    box-shadow: -4px -4px 10px rgba(0,245,196,0.3);
+  }
+
+  .camera-corners::after {
+    bottom: 16px;
+    right: 16px;
+    border-width: 0 2px 2px 0;
+    box-shadow: 4px 4px 10px rgba(0,245,196,0.3);
+  }
+
+  .gesture-zone {
+    position: absolute;
+    top: 100px;
+    left: 100px;
+    width: 300px;
+    height: 300px;
+    border: 2px solid rgba(0,245,196,0.5);
+    border-radius: 4px;
+    pointer-events: none;
+    z-index: 6;
+    box-shadow: 0 0 20px rgba(0,245,196,0.2) inset;
+  }
+
+  .gesture-zone-label {
+    position: absolute;
+    bottom: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: var(--font-mono);
+    font-size: 0.6rem;
+    color: rgba(0,245,196,0.7);
+    white-space: nowrap;
+    letter-spacing: 2px;
+  }
+
+  /* Scanning animation */
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    opacity: 0.6;
+    animation: scan 3s linear infinite;
+    pointer-events: none;
+    z-index: 7;
+  }
+
+  @keyframes scan {
+    0% { top: 0; opacity: 0.6; }
+    90% { opacity: 0.6; }
+    100% { top: 100%; opacity: 0; }
+  }
+
+  /* ── GESTURE GUIDE ── */
+  .gesture-guide {
+    padding: 16px 20px;
+  }
+
+  .guide-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    margin-top: 4px;
+  }
+
+  .guide-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(0,245,196,0.02);
+    transition: all 0.3s ease;
+  }
+
+  .guide-item.active {
+    border-color: var(--accent);
+    background: rgba(0,245,196,0.08);
+    box-shadow: 0 0 15px rgba(0,245,196,0.2);
+    transform: translateY(-2px);
+  }
+
+  .finger-display {
+    font-size: 1.4rem;
+    line-height: 1;
+  }
+
+  .guide-fingers {
+    font-family: var(--font-head);
+    font-size: 0.6rem;
+    color: var(--accent2);
+    letter-spacing: 1px;
+  }
+
+  .guide-action {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .guide-label {
+    font-size: 0.6rem;
+    color: var(--text-dim);
+    text-align: center;
+    letter-spacing: 1px;
+  }
+
+  /* ── RIGHT PANEL ── */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* ── CALCULATOR DISPLAY ── */
+  .calc-display {
+    padding: 0;
+  }
+
+  .display-inner {
+    padding: 24px;
+    position: relative;
+  }
+
+  .display-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+  }
+
+  .expression-display {
+    font-family: var(--font-mono);
+    font-size: 2rem;
+    color: var(--accent2);
+    min-height: 2.5rem;
+    letter-spacing: 4px;
+    text-shadow: 0 0 15px rgba(0,184,255,0.5);
+    word-break: break-all;
+    line-height: 1.2;
+  }
+
+  .expression-cursor {
+    display: inline-block;
+    width: 3px;
+    height: 1.8rem;
+    background: var(--accent);
+    margin-left: 4px;
+    vertical-align: middle;
+    animation: cursorBlink 1s step-end infinite;
+  }
+
+  @keyframes cursorBlink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .divider-line {
+    height: 1px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent2) 50%, transparent 100%);
+    margin: 16px 0;
+    opacity: 0.4;
+  }
+
+  .result-label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .result-display {
+    font-family: var(--font-head);
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    min-height: 3.5rem;
+    transition: all 0.4s ease;
+    letter-spacing: 2px;
+  }
+
+  .result-display.pop {
+    animation: resultPop 0.5s ease-out;
+  }
+
+  @keyframes resultPop {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    60% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .result-display.error {
+    color: var(--accent3);
+    text-shadow: 0 0 20px rgba(255,107,53,0.5);
+  }
+
+  /* ── FINGER METER ── */
+  .finger-meter-panel .display-inner {
+    padding: 20px 24px;
+  }
+
+  .meter-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .meter-bars {
+    display: flex;
+    gap: 6px;
+    flex: 1;
+  }
+
+  .meter-bar {
+    flex: 1;
+    height: 32px;
+    background: rgba(0,245,196,0.05);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .meter-bar.lit {
+    background: rgba(0,245,196,0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 10px rgba(0,245,196,0.3);
+  }
+
+  .meter-bar.lit::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(0,245,196,0.3) 0%, rgba(0,245,196,0.1) 100%);
+  }
+
+  .meter-count {
+    font-family: var(--font-head);
+    font-size: 2rem;
+    font-weight: 900;
+    color: var(--accent);
+    text-shadow: var(--glow);
+    min-width: 2.5rem;
+    text-align: right;
+  }
+
+  .last-gesture-tag {
+    margin-top: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    background: rgba(0,245,196,0.05);
+    transition: all 0.3s ease;
+  }
+
+  .last-gesture-tag.flash {
+    animation: tagFlash 0.4s ease-out;
+  }
+
+  @keyframes tagFlash {
+    0% { background: rgba(0,245,196,0.3); box-shadow: 0 0 20px rgba(0,245,196,0.4); }
+    100% { background: rgba(0,245,196,0.05); }
+  }
+
+  /* ── HISTORY ── */
+  .history-panel .display-inner {
+    padding: 16px 20px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .history-panel .display-inner::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .history-panel .display-inner::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .history-panel .display-inner::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 2px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    border: 1px solid var(--border);
+    background: rgba(0,245,196,0.02);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    opacity: 0;
+    transform: translateX(20px);
+    animation: slideIn 0.3s ease forwards;
+  }
+
+  @keyframes slideIn {
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  .history-expr {
+    color: var(--text-dim);
+  }
+
+  .history-eq {
+    color: var(--border);
+    margin: 0 8px;
+  }
+
+  .history-res {
+    color: var(--accent);
+    font-weight: bold;
+  }
+
+  .history-empty {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 20px;
+    letter-spacing: 2px;
+  }
+
+  /* ── CLEAR BUTTON ── */
+  .btn-clear {
+    width: 100%;
+    padding: 14px;
+    background: transparent;
+    border: 1px solid var(--accent3);
+    color: var(--accent3);
+    font-family: var(--font-head);
+    font-size: 0.75rem;
+    letter-spacing: 3px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-clear::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent3);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .btn-clear:hover::before { opacity: 0.1; }
+
+  .btn-clear:hover {
+    box-shadow: 0 0 20px rgba(255,107,53,0.3);
+    transform: translateY(-1px);
+  }
+
+  .btn-clear:active { transform: translateY(0); }
+
+  /* ── FOOTER ── */
+  footer {
+    position: relative;
+    z-index: 10;
+    padding: 12px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-text {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+  }
+
+  .footer-text span {
+    color: var(--accent);
+  }
+
+  /* ── NOTIFICATIONS ── */
+  #notif {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .notif-item {
+    padding: 10px 16px;
+    background: var(--panel);
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--accent);
+    box-shadow: var(--glow);
+    animation: notifIn 0.3s ease, notifOut 0.3s ease 2.7s forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .notif-item.error {
+    border-color: var(--accent3);
+    color: var(--accent3);
+    box-shadow: 0 0 20px rgba(255,107,53,0.3);
+  }
+
+  @keyframes notifIn {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes notifOut {
+    to { opacity: 0; transform: translateX(20px); }
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    main {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto;
+      padding: 16px 20px;
+    }
+    .camera-section { grid-row: auto; }
+    header { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#00f5c4" stroke-width="2">
+        <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0"/>
+        <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2"/>
+        <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8"/>
+        <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/>
+      </svg>
+    </div>
+    <div class="logo-text">
+      <h1>GESTUREMATH</h1>
+      <p>Hand-Powered Calculator v2.0</p>
+    </div>
+  </div>
+  <div class="status-bar">
+    <div class="status-dot"><div class="dot"></div>CAMERA ACTIVE</div>
+    <div class="status-dot" style="color:var(--accent2)">
+      <div class="dot" style="background:var(--accent2);box-shadow:0 0 8px var(--accent2)"></div>
+      CV ENGINE ONLINE
+    </div>
+  </div>
+</header>
+
+<!-- ── NOTIFICATIONS ── -->
+<div id="notif"></div>
+
+<!-- ── MAIN ── -->
+<main>
+
+  <!-- Left: Camera -->
+  <div class="camera-section">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Live Camera Feed</span>
+        <span class="panel-badge" id="fps-badge">PROCESSING</span>
+      </div>
+      <div class="camera-wrap">
+        <img src="/video_feed" alt="Camera Feed" id="camFeed">
+        <div class="camera-corners"></div>
+        <div class="gesture-zone">
+          <span class="gesture-zone-label">DETECTION ZONE</span>
+        </div>
+        <div class="scan-line"></div>
+      </div>
+    </div>
+
+    <!-- Gesture Guide -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">Gesture Reference</span>
+        <span class="panel-badge">5 GESTURES</span>
+      </div>
+      <div class="gesture-guide">
+        <div class="guide-grid">
+          <div class="guide-item" id="g1">
+            <div class="finger-display">☝️</div>
+            <div class="guide-fingers">1 FINGER</div>
+            <div class="guide-action">= SOLVE</div>
+            <div class="guide-label">Execute</div>
+          </div>
+          <div class="guide-item" id="g2">
+            <div class="finger-display">✌️</div>
+            <div class="guide-fingers">2 FINGERS</div>
+            <div class="guide-action">2</div>
+            <div class="guide-label">Digit</div>
+          </div>
+          <div class="guide-item" id="g3">
+            <div class="finger-display">🤟</div>
+            <div class="guide-fingers">3 FINGERS</div>
+            <div class="guide-action">3</div>
+            <div class="guide-label">Digit</div>
+          </div>
+          <div class="guide-item" id="g4">
+            <div class="finger-display">🖖</div>
+            <div class="guide-fingers">4 FINGERS</div>
+            <div class="guide-action">+</div>
+            <div class="guide-label">Add</div>
+          </div>
+          <div class="guide-item" id="g5">
+            <div class="finger-display">🖐️</div>
+            <div class="guide-fingers">5 FINGERS</div>
+            <div class="guide-action">−</div>
+            <div class="guide-label">Subtract</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right: Controls -->
+  <div class="right-col">
+
+    <!-- Calculator Display -->
+    <div class="panel calc-display">
+      <div class="panel-header">
+        <span class="panel-title">Calculator</span>
+        <span class="panel-badge" id="mode-badge">INPUT MODE</span>
+      </div>
+      <div class="display-inner">
+        <div class="display-label">Expression</div>
+        <div class="expression-display" id="exprDisplay">
+          <span id="exprText"></span><span class="expression-cursor"></span>
+        </div>
+        <div class="divider-line"></div>
+        <div class="result-label">Result</div>
+        <div class="result-display" id="resultDisplay">—</div>
+      </div>
+    </div>
+
+    <!-- Finger Meter -->
+    <div class="panel finger-meter-panel">
+      <div class="panel-header">
+        <span class="panel-title">Detection</span>
+        <span class="panel-badge">REAL-TIME</span>
+      </div>
+      <div class="display-inner">
+        <div class="display-label">Fingers Detected</div>
+        <div class="meter-row">
+          <div class="meter-bars" id="meterBars">
+            <div class="meter-bar" id="bar1"></div>
+            <div class="meter-bar" id="bar2"></div>
+            <div class="meter-bar" id="bar3"></div>
+            <div class="meter-bar" id="bar4"></div>
+            <div class="meter-bar" id="bar5"></div>
+          </div>
+          <div class="meter-count" id="fingerCount">0</div>
+        </div>
+        <div class="last-gesture-tag" id="gestureTag">
+          <span>◈</span>
+          <span id="gestureText">WAITING FOR GESTURE...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="panel history-panel" style="flex:1">
+      <div class="panel-header">
+        <span class="panel-title">Calculation History</span>
+        <span class="panel-badge" id="histCount">0 ENTRIES</span>
+      </div>
+      <div class="display-inner" id="historyList">
+        <div class="history-empty">[ NO CALCULATIONS YET ]</div>
+      </div>
+    </div>
+
+    <!-- Clear -->
+    <button class="btn-clear" onclick="clearAll()">⌫ &nbsp; CLEAR EXPRESSION</button>
+
+  </div>
+</main>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-text">GESTUREMATH // <span>OPENCV + FLASK</span> // HAND TRACKING ENGINE</div>
+  <div class="footer-text">PLACE HAND IN <span>GREEN DETECTION ZONE</span> // HOLD GESTURE FOR 1.5s</div>
+</footer>
+
+<script>
+  let prevExpr = "";
+  let prevResult = "";
+  let prevGesture = "";
+  let prevFingers = 0;
+  let historyData = [];
+
+  function showNotif(msg, isError = false) {
+    const el = document.createElement('div');
+    el.className = 'notif-item' + (isError ? ' error' : '');
+    el.innerHTML = `<span>${isError ? '⚠' : '✓'}</span> ${msg}`;
+    document.getElementById('notif').appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+
+  function updateMeters(count) {
+    for (let i = 1; i <= 5; i++) {
+      const bar = document.getElementById('bar' + i);
+      if (i <= count) bar.classList.add('lit');
+      else bar.classList.remove('lit');
+    }
+    document.getElementById('fingerCount').textContent = count || '0';
+
+    // Highlight active gesture guide
+    for (let i = 1; i <= 5; i++) {
+      document.getElementById('g' + i).classList.toggle('active', i === count);
+    }
+  }
+
+  function updateState(data) {
+    // Expression
+    const exprEl = document.getElementById('exprText');
+    if (data.expression !== prevExpr) {
+      exprEl.textContent = data.expression || '';
+      prevExpr = data.expression;
+    }
+
+    // Result
+    const resEl = document.getElementById('resultDisplay');
+    if (data.result !== prevResult) {
+      resEl.textContent = data.result || '—';
+      resEl.className = 'result-display';
+      if (data.result === 'Error') {
+        resEl.classList.add('error');
+        showNotif('Calculation error — check expression', true);
+      } else if (data.result) {
+        resEl.classList.add('pop');
+        document.getElementById('mode-badge').textContent = 'RESULT';
+        showNotif(`Result: ${data.result}`);
+        setTimeout(() => {
+          document.getElementById('mode-badge').textContent = 'INPUT MODE';
+        }, 2000);
+      }
+      prevResult = data.result;
+    }
+
+    // Fingers
+    if (data.finger_count !== prevFingers) {
+      updateMeters(data.finger_count);
+      prevFingers = data.finger_count;
+    }
+
+    // Gesture tag
+    if (data.last_gesture !== prevGesture && data.last_gesture) {
+      const tag = document.getElementById('gestureTag');
+      const txt = document.getElementById('gestureText');
+      const gestureLabels = {
+        '2': 'INPUT: 2',
+        '3': 'INPUT: 3',
+        '+': 'OPERATOR: ADD (+)',
+        '−': 'OPERATOR: SUBTRACT (−)',
+        'SOLVED': 'EXPRESSION SOLVED ✓',
+        'ERROR': 'CALCULATION ERROR ✗'
+      };
+      txt.textContent = gestureLabels[data.last_gesture] || data.last_gesture;
+      tag.classList.remove('flash');
+      void tag.offsetWidth;
+      tag.classList.add('flash');
+      prevGesture = data.last_gesture;
+    }
+
+    // History
+    if (JSON.stringify(data.history) !== JSON.stringify(historyData)) {
+      historyData = data.history;
+      renderHistory();
+    }
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    const count = document.getElementById('histCount');
+    count.textContent = `${historyData.length} ENTRIES`;
+
+    if (historyData.length === 0) {
+      list.innerHTML = '<div class="history-empty">[ NO CALCULATIONS YET ]</div>';
+      return;
+    }
+
+    list.innerHTML = [...historyData].reverse().map((h, i) => `
+      <div class="history-item" style="animation-delay:${i * 0.05}s">
+        <span class="history-expr">${h.expr}</span>
+        <span class="history-eq">=</span>
+        <span class="history-res">${h.result}</span>
+      </div>
+    `).join('');
+  }
+
+  async function clearAll() {
+    await fetch('/clear', { method: 'POST' });
+    prevResult = "";
+    prevExpr = "";
+    document.getElementById('exprText').textContent = '';
+    document.getElementById('resultDisplay').textContent = '—';
+    document.getElementById('resultDisplay').className = 'result-display';
+    showNotif('Expression cleared');
+  }
+
+  // Poll state every 200ms
+  async function pollState() {
+    try {
+      const res = await fetch('/state');
+      const data = await res.json();
+      updateState(data);
+    } catch (e) {}
+    setTimeout(pollState, 200);
+  }
+
+  pollState();
+</script>
+</body>
+</html>
